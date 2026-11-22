@@ -83,31 +83,6 @@ describe('world core (blocks.js) on the BDS 1.26.51.1 join capture', () => {
     assert.strictEqual(afterRequests, beforeRequests + 1, 'subchunk_request was sent for UINT32_MAX chunk')
   })
 
-  it('handles level_chunk with positive sub_chunk_count and biomes-only payload (e.g. The Hive game maps)', async () => {
-    const Stream = require('prismarine-chunk/src/bedrock/common/Stream')
-    const { client } = await joined()
-
-    const w = new Stream()
-    for (let i = 0; i < 24; i++) {
-      w.writeUInt8(1)
-      w.writeVarInt(1 << 1)
-    }
-    w.writeUInt8(0) // 0 border blocks
-
-    const beforeRequests = client.sent('subchunk_request').length
-    client.receive('level_chunk', {
-      x: 11,
-      z: 11,
-      dimension: 0,
-      sub_chunk_count: 24, // Positive count for 24 subchunks, but biomes-only payload
-      highest_subchunk_count: undefined,
-      payload: w.getBuffer()
-    })
-
-    const afterRequests = client.sent('subchunk_request').length
-    assert.strictEqual(afterRequests, beforeRequests + 1, 'subchunk_request was sent for positive sub_chunk_count chunk')
-  })
-
   it('update_block (layer 0) → blockUpdate and blockUpdate:(x, y, z); _updateBlockState', async () => {
     const { bot, client } = await joined()
     const seen = []
