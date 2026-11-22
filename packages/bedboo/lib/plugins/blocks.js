@@ -114,9 +114,26 @@ function inject (bot) {
         }
         requestSubChunks(column, dimId)
       } else {
-        column.networkDecodeNoCache(packet.payload, packet.sub_chunk_count)
-        pendingColumns.delete(`${packet.x},${packet.z}`)
-        bot.world.setColumn(packet.x, packet.z, column)
+        try {
+          column.networkDecodeNoCache(packet.payload, packet.sub_chunk_count)
+          pendingColumns.delete(`${packet.x},${packet.z}`)
+          bot.world.setColumn(packet.x, packet.z, column)
+        } catch (err) {
+          // Servers supporting on-demand sub-chunk streaming (e.g. The Hive arena/game maps) may send
+          // sub_chunk_count > 0 without highest_subchunk_count while payload holds biomes only.
+          const fallback = newColumn(packet.x, packet.z)
+          try {
+            fallback.networkDecodeNoCache(packet.payload, 0)
+          } catch (_) {
+            throw err
+          }
+          if (clientOwnsChunks()) {
+            const known = bot.world.getColumn(packet.x, packet.z)
+            if (!known) bot.world.setColumn(packet.x, packet.z, fallback)
+            return
+          }
+          requestSubChunks(fallback, dimId)
+        }
       }
     } catch (err) {
       bot.emit('error', err)
